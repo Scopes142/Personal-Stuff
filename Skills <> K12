@@ -1,0 +1,64 @@
+#Table to study First Time Skills Product buyers buying K12 Product and vice versa
+
+SELECT
+year,
+month,
+COUNT(CASE WHEN verticle = 'K12' AND verticle_rank=1 AND purchase_order=1 THEN cat_id end) fisrt_time_k12_buyer,
+COUNT(CASE WHEN verticle = 'K12' AND verticle_rank=1 AND purchase_order>1 THEN tenms_id end) K12TSkills_buyer,
+ROUND(COUNT(CASE WHEN verticle = 'K12' AND verticle_rank=1 AND purchase_order>1 THEN tenms_id end)/COUNT(CASE WHEN verticle = 'K12' AND verticle_rank=1 AND purchase_order=1 THEN cat_id end),4) K12TSkills_Perc,
+'' _,
+COUNT(CASE WHEN verticle = 'Skills' AND verticle_rank=1 AND purchase_order=1 THEN cat_id end) fisrt_time_Skills_buyer,
+COUNT(CASE WHEN verticle = 'Skills' AND verticle_rank=1 AND purchase_order>1 THEN tenms_id end) SkillsTK12_buyer,
+ROUND(COUNT(CASE WHEN verticle = 'Skills' AND verticle_rank=1 AND purchase_order>1 THEN tenms_id end)/COUNT(CASE WHEN verticle = 'Skills' AND verticle_rank=1 AND purchase_order=1 THEN cat_id end),4) SkillsTK12_Perc
+FROM
+(
+SELECT *,
+ROW_NUMBER () OVER(PARTITION BY tenms_id, verticle ORDER BY date ASC) as verticle_rank,
+ROW_NUMBER () OVER(PARTITION BY tenms_id ORDER BY date ASC) as purchase_order
+FROM
+(
+
+SELECT *,
+CASE 
+  WHEN cat_id IN (11,21,22,24) THEN 'Skills'
+  WHEN cat_id IN (16, 17, 26) THEN 'K12'
+  END verticle,
+FROM
+
+(
+SELECT
+DATE(created_at) date,
+EXTRACT(YEAR FROM DATE(created_at)) AS year,
+EXTRACT(MONTH FROM DATE(created_at)) AS month,
+tenms_id,
+a3.cat_id
+FROM tenms-userdb.ab_crm.transaction_export_records a1
+INNER JOIN (
+          SELECT
+          sku_id,
+          prod_id,
+          cat_id,
+          name
+          FROM tenms-userdb.ab_crm.sku
+          GROUP BY 1,2,3, 4
+          ) a2
+ON a1.prod_id = a2.prod_id
+INNER JOIN (
+          SELECT
+          cat_id,
+          title
+          FROM tenms-userdb.ab_crm.item_categories
+          WHERE cat_id IN (16,17,26,21, 24, 11, 22)
+          GROUP BY 1, 2
+          ) a3
+ON a2.cat_id = a3.cat_id
+-- WHERE a3.cat_id IN (21, 24, 11, 22)
+-- AND rank_no = 1
+GROUP BY 1,2,3,4,5
+ORDER BY 1 DESC, 2 ASC
+)
+-- WHERE tenms_id = '1469555'
+)
+)
+GROUP BY 1,2
+ORDER BY 1 DESC, 2 DESC
