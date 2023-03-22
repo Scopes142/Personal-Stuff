@@ -1,0 +1,97 @@
+WITH ranked AS
+(
+select*
+,ROW_NUMBER () OVER(PARTITION BY month ORDER BY sales DESC) as row
+from  (
+      SELECT
+      format_date('%Y-%m', date(date)) month,
+      item_name,
+      sum(price) as sales
+      FROM tenms-userdb.ab_crm.transaction_export_records a1
+      LEFT JOIN (
+                SELECT
+                sku_id,
+                prod_id,
+                cat_id,
+                name
+                FROM tenms-userdb.ab_crm.sku
+                GROUP BY 1,2,3, 4
+                ) a2
+      ON a1.prod_id = a2.prod_id
+      LEFT JOIN (
+                SELECT
+                cat_id,
+                title
+                FROM tenms-userdb.ab_crm.item_categories
+                GROUP BY 1, 2
+                ) a3
+      ON a2.cat_id = a3.cat_id
+      WHERE a3.cat_id IN (21, 24, 11, 22)
+      GROUP BY 1, 2
+      ORDER BY 1 DESC, 3 DESC
+      )
+),
+
+top5 AS
+(
+SELECT
+month,
+ROUND((SUM(sales))/85,4) Top5
+FROM ranked
+WHERE row IN (1,2,3,4,5)
+GROUP BY 1
+),
+
+top10 AS
+(
+SELECT
+month,
+ROUND((SUM(sales))/85,4) Top10
+FROM ranked
+WHERE row IN (1,2,3,4,5,6,7,8,9,10)
+GROUP BY 1
+)
+
+
+
+SELECT
+--DATE(date),
+-- a3.title,
+--EXTRACT(YEAR FROM DATE(date)) AS year,
+format_date('%Y-%m', date(date)) month,
+EXTRACT(MONTH FROM DATE(date)) AS month,
+COUNT(DISTINCT a1.cust_id) AS user_count,
+COUNT(*) AS unit_sold,
+ROUND((COUNT(*)/COUNT(DISTINCT a1.cust_id)),4) AS Avg_Course_Per_Buyer,
+ROUND(SUM(a1.price)/85,4) AS USD_Rev,
+ROUND((SUM(a1.price)/85)/COUNT(DISTINCT a1.cust_id),4) AS ARPU,
+top5.Top5,
+ROUND(top5.Top5/(SUM(a1.price)/85),4) Top5_Perc,
+top10.Top10,
+ROUND(top10.Top10/(SUM(a1.price)/85),4) Top10_Perc
+FROM tenms-userdb.ab_crm.transaction_export_records a1
+LEFT JOIN (
+          SELECT
+          sku_id,
+          prod_id,
+          cat_id,
+          name
+          FROM tenms-userdb.ab_crm.sku
+          GROUP BY 1,2,3, 4
+          ) a2
+ON a1.prod_id = a2.prod_id
+LEFT JOIN (
+          SELECT
+          cat_id,
+          title
+          FROM tenms-userdb.ab_crm.item_categories
+          GROUP BY 1, 2
+          ) a3
+ON a2.cat_id = a3.cat_id
+LEFT JOIN top5
+ON format_date('%Y-%m', date(date)) = top5.month
+LEFT JOIN top10
+ON format_date('%Y-%m', date(date)) = top10.month
+WHERE a3.cat_id IN (21, 24, 11, 22)
+GROUP BY 1, 2, 8, 10
+ORDER BY 1 DESC
