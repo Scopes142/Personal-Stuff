@@ -1,5 +1,4 @@
 #Table to study First Time Skills Product buyers buying K12 Product and vice versa
-
 #Step 1: Identify which categories of products are K12 and Skills.
 #Step 2: Create two ranking columns to find i) Which verticle was first purchased and ii) Which purchase was the 1st purchase for any user.
 #Step 3: Create a summary table based on year and month wise user purchasing K12 Product for the 1st time and later on purchasing Skills product.
